@@ -1,0 +1,57 @@
+x-environment: &default-env
+  environment:
+    POSTGRES_USER: ${POSTGRES_USER}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    POSTGRES_DB: ${POSTGRES_DB}
+
+services:
+  postgres:
+    image: postgres:18.6-alpine3.23
+    container_name: wms-postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/18/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    <<: *default-env
+  migrations:
+    image: flyway/flyway:latest
+    container_name: wms-flyway
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./db/migrations:/flyway/sql
+    command: 
+      - -url=jdbc:postgresql://postgres:5432/warehouse 
+      - -user=${POSTGRES_USER} 
+      - -password=${POSTGRES_PASSWORD}
+      - -locations=filesystem:/flyway/sql 
+      - migrate
+  server:
+    container_name: wms-sever
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./server:/app
+      - server_node_modules:/app/node_modules
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      PORT: 3000
+      SESSION_SECRET: ${SESSION_SECRET}
+      CHOKIDAR_USEPOLLING: "true"
+    depends_on:
+      - postgres
+    <<: *default-env
+
+volumes:
+  postgres_data:
+  server_node_modules:
