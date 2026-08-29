@@ -1,168 +1,114 @@
-import { createUser, findUserByEmail, setUserRole } from '../repositories/users.repository.js';
-import { logError } from '../config/db.js';
+import UsersRepository from "../repositories/users.repository.js";
 import type { Request, Response } from 'express';
+import type { 
+  User,
+  PublicUser
+} from "../types/users.js";
 import argon2 from 'argon2';
+import { omit } from "../utils.js";
 
-export async function signUpUser(req: Request, res: Response) {
-    try {
-        const hash = await hashPassword(req.body.password);
+const usersRepository = new UsersRepository();
 
-        const user = await createUser({
-            email: req.body.email,
-            passwordHash: hash,
-            firstName: req.body.firstName,
-            lastName: req.body.lastName
-        });
+export default class UsersController {
+  private async hashPassword(password: string): Promise<string> {
+    const hash = await argon2.hash(password);
+    return hash;
+  }
 
-        if (user == null) {
-            return res.status(500).json({
-                success: false,
-                message: "Internal server error"
-            });
-        }
-
-        req.session.user = {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role
-        };
-
-        return res.status(201).json({
-            success: true,
-            redirectTo: "/dashboard"
-        });
-    } catch (error: unknown) {
-        if (error instanceof Error) {
-            console.log(error.message);
-        }
-
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        });
+  private async verifyPassword(password: string, hash: string): Promise<boolean> {
+    const match = await argon2.verify(hash, password);
+    if (!match) {
+      return false;
     }
-}
+    return true;
+  }
 
-export async function logInUser(req: Request, res: Response) {
+  async signUpUser(req: Request, res: Response): Promise<Response> {
     try {
-        const user = await findUserByEmail(req.body.email);
+      const hash = await this.hashPassword(req.body.password);
 
-        if (!verifyPassword(req.body.password, user.passwordHash)) {
-            console.log("Passwords do not match");
-            return res.status(401).json({
-                success: false,
-                message: "Invalid email or password"
-            });
-        }
+      const newUser: User | null = await usersRepository.create({
+        email: req.body.email,
+        passwordHash: hash,
+        firstName: req.body.firstName,
+        lastName: req.body.lastName
+      });
 
-        req.session.regenerate((err) => {
-            if (err) {
-                return res.status(500).json({
-                    success: false,
-                    message: "Internal server error"
-                });
-            }
-
-            req.session.user = {
-                id: user.id,
-                email: user.email,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                role: user.role
-            };
-
-            req.session.loggedIn = true;
-
-            return res.status(200).json({
-                success: true,
-                redirectTo: "/dashboard"
-            });
-        });
-
-        return;
-    } catch (error: unknown) {
-        if (error instanceof Error) {
-            console.log(error.message);
-        }
-
+      if (newUser == null) {
         return res.status(500).json({
-            success: false,
-            message: "Internal server error"
+          success: false,
+          message: "Internal server error"
         });
+      }
+
+      const publicUser: PublicUser = omit(newUser, ["passwordHash", "id"]);
+
+      req.session.user = publicUser;
+      req.session.loggedIn = true;
+
+      return res.status(201).json({
+        success: true,
+        redirectTo: "/dashboard"
+      });
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.log(error.message);
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error"
+      });
     }
-}
+  }
 
-export async function updateUserRole(req: Request, res: Response) {
-    const isAdmin = req.session 
-                    && req.session.user 
-                    && req.session.user.role == "admin";
+  private regenerateSession(req: Request): Promise<void> {
+    return new Promise((resolve, reject) => {
+      req.session.regenerate((err) => {
+        if (err) return reject(err);
+        resolve();
+      })
+    })
+  }
 
-    if (!isAdmin) {
+  async logInUser(req: Request, res: Response): Promise<Response> {
+    try {
+      const user: User | null = await usersRepository.findByEmail(req.body.email);
+
+      if (user == null) {
         return res.status(401).json({
-            success: false,
-            message: "Unauthorized to update user role"
+          success: false,
+          message: "Invalid email or password"
         });
-    }
+      }
 
-    try {
-        const data = { email: req.body.email, role: req.body.role };
-        if (data.email == null || data.role == null) {
-            return res.status(400).json({
-                success: false,
-                message: "User ID or role is null"
-            });
-        }
-        
-        void setUserRole(data);
-
-        return res.status(200).json({
-            success: true,
-            message: "User role updated successfully"
+      if (!this.verifyPassword(req.body.password, user.passwordHash)) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid email or password"
         });
-    } catch (error: unknown) {
-        if (error instanceof Error) {
-            console.log(error.message);
-        }
+      }
 
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error"
-        });
+      await this.regenerateSession(req);
+
+      const publicUser: PublicUser = omit(user, ["passwordHash", "id"]);
+
+      req.session.user = publicUser;
+      req.session.loggedIn = true;
+
+      return res.status(200).json({
+        success: true,
+        message: "Logged in successfully"
+      });
+    } catch (error: unknown) { 
+      if (error instanceof Error) {
+        console.log(error.message);
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error"
+      });
     }
-}
-
-async function hashPassword(password: string) {
-    try {
-        const hash = await argon2.hash(password);
-        return hash;
-    } catch (error) {
-        logError({
-            type: "authentication",
-            func: "hashPassword",
-            args: [], // Don't store plaintext password
-            error: error instanceof Error ? error.message : "Unknown error"
-        })
-        throw error;
-    }
-}
-
-async function verifyPassword(password: string, hash: string) {
-    try {
-        const match = await argon2.verify(hash, password);
-        if (!match) {
-            return false;
-        }
-        return true;
-    } catch (error: unknown) {
-        logError({
-            type: "authentication",
-            func: "verifyPassword",
-            args: [], // Don't store plaintext password
-            error: error instanceof Error ? error.message : "Unknown error"
-
-        })
-        throw error;
-    }
+  }
 }

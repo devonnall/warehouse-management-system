@@ -1,10 +1,11 @@
 import express from "express";
-import { signUpUser, logInUser, updateUserRole } from "../controllers/users.controller.js"
+import UsersController from "../controllers/users.controller.js"
 
 const router = express();
 
-router.post("/api/users/signup", signUpUser);
-router.post("/api/users/login", logInUser);
-router.post("/api/users/set-role", updateUserRole);
+const usersController = new UsersController();
+
+router.post("/api/users/signup", usersController.signUpUser.bind(usersController));
+router.post("/api/users/login", usersController.logInUser.bind(usersController));
 
 export { router as usersRouter };

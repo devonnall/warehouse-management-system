@@ -28,6 +28,7 @@ services:
     volumes:
       - ./db/migrations:/flyway/sql
     command: 
+      - -cleanDisabled=false
       - -url=jdbc:postgresql://postgres:5432/warehouse 
       - -user=${POSTGRES_USER} 
       - -password=${POSTGRES_PASSWORD}
