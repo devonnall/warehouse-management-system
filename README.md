@@ -1,7 +1,6 @@
-# Warehouse Management System
+# Project Management System
 
-The Warehouse Management System (WMS) is an application for the owners/managers to manage the warehouse's daily operations. Owners/managers,
-clients, and vendors can all interact in the WMS to facilitate business operations.
+This application serves to minic the functionality of developer-focused tools like Linear and Jira for general proejct management.
 
 ## Status
 
@@ -11,7 +10,6 @@ clients, and vendors can all interact in the WMS to facilitate business operatio
 
 - User account creation
 - Session-based user authentication
-- Basic user roles (admin, manager, employee)
 - PostgreSQL database
 - Flyway setup for database migrations
 - Containerization of database, Flyway migrations, and Express.js server
@@ -21,3 +19,14 @@ clients, and vendors can all interact in the WMS to facilitate business operatio
 - PostgreSQL + Flyway for migrations
 - Express.js + TypeScript for server/API
 - Docker for containerizing database, server, and Flyway
+
+## Architecture
+
+### Server Architecture
+
+The Express.js server follows the Repository-Service-Controller-Route architecture, where:
+
+- Repositories directly query the database
+- Services contain business logic
+- Controllers contain logic to handle HTTP requests
+- Routes define API routes, middleware, and associated controllers
