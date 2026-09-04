@@ -10,6 +10,7 @@ declare global {
       POSTGRES_PASSWORD: string;
       POSTGRES_DB: string;
       DATABASE_URL: string;
+      BASE_URL: string;
     }
   }
 }

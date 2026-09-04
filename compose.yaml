@@ -7,7 +7,7 @@ x-environment: &default-env
 services:
   postgres:
     image: postgres:18.6-alpine3.23
-    container_name: wms-postgres
+    container_name: ${PROJECT_NAME}-postgres
     restart: always
     ports:
       - "5432:5432"
@@ -21,21 +21,21 @@ services:
     <<: *default-env
   migrations:
     image: flyway/flyway:latest
-    container_name: wms-flyway
+    container_name: ${PROJECT_NAME}-flyway
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - ./db/migrations:/flyway/sql
-    command: 
-      - -cleanDisabled=false
-      - -url=jdbc:postgresql://postgres:5432/warehouse 
-      - -user=${POSTGRES_USER} 
-      - -password=${POSTGRES_PASSWORD}
-      - -locations=filesystem:/flyway/sql 
-      - migrate
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      FLYWAY_USER: ${POSTGRES_USER}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_CLEAN_DISABLED: "false"
+    command: ${FLYWAY_COMMAND:-migrate}
   server:
-    container_name: wms-sever
+    container_name: ${PROJECT_NAME}-sever
     build:
       context: ./server
       dockerfile: Dockerfile
@@ -48,6 +48,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       PORT: 3000
       SESSION_SECRET: ${SESSION_SECRET}
+      BASE_URL: ${BASE_URL}
       CHOKIDAR_USEPOLLING: "true"
     depends_on:
       - postgres

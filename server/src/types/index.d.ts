@@ -1,9 +1,8 @@
-import "express-session";
-import type { User } from "./users.d.js";
+import 'express-session';
 
-declare module "express-session" {
-    interface SessionData {
-        user: User,
-        loggedIn: bool
-    }
+declare module 'express-session' {
+  interface SessionData {
+    userId: string;
+    loggedIn: bool;
+  }
 }

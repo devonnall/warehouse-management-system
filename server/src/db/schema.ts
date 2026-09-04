@@ -1,771 +1,558 @@
 import {
-    pgTable,
-    uuid,
-    integer,
-    bigint,
-    numeric,
-    text,
-    varchar,
-    timestamp,
-    date,
-    boolean,
-    jsonb,
-    primaryKey,
-    foreignKey,
-    unique
-} from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+  pgTable,
+  uuid,
+  integer,
+  text,
+  varchar,
+  timestamp,
+  date,
+  boolean,
+  jsonb,
+  primaryKey,
+  foreignKey,
+} from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
-export const users = pgTable("users", {
-    id: uuid().primaryKey().default(sql`uuidv7()`),
-    email: varchar({ length: 255 }).notNull().unique(),
-    passwordHash: varchar("password_hash", { length: 255 }).notNull(),
-    firstName: varchar("first_name", { length: 100 }).notNull(),
-    lastName: varchar("last_name", { length: 100 }).notNull(),
-    isActive: boolean("is_active").default(true),
-    createdAt: timestamp("created_at", {
-        withTimezone: true
-    }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", {
-        withTimezone: true
-    }).notNull().defaultNow()
+const users = pgTable('users', {
+  id: uuid()
+    .primaryKey()
+    .default(sql`uuidv7()`),
+  email: varchar({ length: 255 }).notNull().unique(),
+  passwordHash: varchar('password_hash', { length: 255 }),
+  firstName: varchar('first_name', { length: 100 }),
+  lastName: varchar('last_name', { length: 100 }),
+  createdAt: timestamp('created_at', {
+    withTimezone: true,
+  })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', {
+    withTimezone: true,
+  })
+    .notNull()
+    .defaultNow(),
 });
 
-export const admins = pgTable("admins", {
-    userId: uuid("user_id")
-        .primaryKey(),
-    assignedAt: timestamp("assigned_at", {
-        withTimezone: true
-    }).notNull().defaultNow()
-}, (table) => [
-    foreignKey({
-        name: "fk_admins_users",
-        columns: [table.userId],
-        foreignColumns: [users.id]
-    })
-]);
-
-export const organizations = pgTable("organizations", {
-    id: uuid().primaryKey().default(sql`uuidv7()`),
+const workspaces = pgTable(
+  'workspaces',
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
     name: varchar({ length: 255 }).notNull(),
-    organizationType: varchar("organization_type", { 
-        length: 30 
-    }).notNull(),
-    contactEmail: varchar("contact_email", {
-        length: 255
-    }),
-    contactPhone: varchar("contact_phone", {
-        length: 30
-    }),
-    billingAddress: varchar("billing_address", {
-        length: 255
-    }),
-    isActive: boolean("is_active").notNull().default(true),
-    createdAt: timestamp("created_at", {
-        withTimezone: true
-    }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", {
-        withTimezone: true
-    }).notNull().defaultNow()
-});
-
-export const organizationUsers = pgTable("organization_users", {
-    organizationId: uuid("organization_id")
-        .notNull(),
-    userId: uuid("user_id")
-        .notNull(),
-    joinedAt: timestamp("joined_at", {
-            withTimezone: true
-        }).notNull().defaultNow(),
-    isActive: boolean("is_active").notNull().default(true)
-}, (table) => [
-    primaryKey({
-        columns: [table.organizationId, table.userId]
-    }),
-    foreignKey({
-        name: "fk_organization_users_organizations",
-        columns: [table.organizationId],
-        foreignColumns: [organizations.id]
-    }).onDelete("cascade"),
-    foreignKey({
-        name: "fk_organization_users_users",
-        columns: [table.userId],
-        foreignColumns: [users.id]
-    }).onDelete("cascade")
-]);
-
-export const permissions = pgTable("permissions", {
-    id: integer().primaryKey().generatedAlwaysAsIdentity(),
-    name: varchar({ length: 100 }).notNull().unique(),
-    description: text()
-});
-
-export const roles = pgTable("roles", {
-    id: integer().primaryKey().generatedAlwaysAsIdentity(),
-    name: varchar({ length: 100 }).notNull().unique(),
-    description: text()
-});
-
-export const rolePermissions = pgTable("role_permissions", {
-    roleId: integer("role_id")
-        .notNull(),
-    permissionId: integer("permission_id")
-        .notNull()
-}, (table) => [
-    primaryKey({
-        columns: [table.roleId, table.permissionId]
-    }),
-    foreignKey({
-        name: "fk_role_permissions_roles",
-        columns: [table.roleId],
-        foreignColumns: [roles.id]
-    }).onDelete("cascade"),
-    foreignKey({
-        name: "fk_role_permissions_permissions",
-        columns: [table.permissionId],
-        foreignColumns: [permissions.id]
-    }).onDelete("cascade")
-]);
-
-export const userRoles = pgTable("user_roles", {
-    userId: uuid("user_id").notNull(),
-    organizationId: uuid("organization_id").notNull(),
-    roleId: integer("role_id").notNull(),
-    assigedAt: timestamp("assigned_at", {
-        withTimezone: true
-    }).notNull().defaultNow()
-}, (table) => [
-    primaryKey({
-        columns: [table.userId, table.organizationId, table.roleId]
-    }),
-    foreignKey({
-        name: "fk_user_roles_membership",
-        columns: [table.userId, table.organizationId],
-        foreignColumns: [organizationUsers.userId, organizationUsers.organizationId]
-    }).onDelete("cascade"),
-    foreignKey({
-        name: "fk_user_roles_roles",
-        columns: [table.roleId],
-        foreignColumns: [roles.id]
-    }).onDelete("cascade")
-]);
-
-export const productCategories = pgTable("product_categories", {
-    id: integer().primaryKey().generatedAlwaysAsIdentity(),
-    name: varchar({ length: 255 }).notNull().unique(),
-    parentCategoryId: integer("parent_category_id")
-}, (table) => [
-    foreignKey({
-        name: "fk_product_categories_parent",
-        columns: [table.parentCategoryId],
-        foreignColumns: [table.id]
+    region: varchar({ length: 255 }).notNull(),
+    createdBy: uuid('created_by').notNull(),
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
     })
-]);
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      name: 'fk_workspaces_users',
+      columns: [table.createdBy],
+      foreignColumns: [users.id],
+    }),
+  ]
+);
 
-export const products = pgTable("products", {
-    id: uuid().primaryKey().default(sql`uuidv7()`),
-    clientId: uuid("client_id").notNull(),
-    categoryId: integer("category_id"),
-    sku: varchar({ length: 100 }).notNull().unique(),
-    productName: varchar({ length: 255 }).notNull(),
+const workspaceUsers = pgTable(
+  'workspace_users',
+  {
+    workspaceId: uuid('workspace_id').notNull(),
+    userId: uuid('user_id').notNull(),
+    joinedAt: timestamp('joined_at', {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.workspaceId, table.userId],
+    }),
+
+    foreignKey({
+      name: 'fk_workspace_users_workspaces',
+      columns: [table.workspaceId],
+      foreignColumns: [workspaces.id],
+    }),
+
+    foreignKey({
+      name: 'fk_workspace_users_users',
+      columns: [table.userId],
+      foreignColumns: [users.id],
+    }),
+  ]
+);
+
+const labels = pgTable('labels', {
+  id: uuid()
+    .primaryKey()
+    .default(sql`uuidv7()`),
+  name: varchar({ length: 255 }).notNull(),
+  labelType: varchar('label_type', { length: 30 }),
+});
+
+const properties = pgTable('properties', {
+  id: uuid()
+    .primaryKey()
+    .default(sql`uuidv7()`),
+  name: varchar({ length: 30 }).notNull(),
+  description: varchar({ length: 80 }),
+  isSystem: boolean('is_system').default(false),
+  propertyType: varchar('property_type', { length: 30 }).notNull(),
+});
+
+const propertyOptions = pgTable(
+  'property_options',
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    propertyId: uuid('property_id').notNull(),
+    label: varchar({ length: 30 }).notNull(),
+    value: varchar({ length: 255 }).notNull(),
+    displayOrder: integer('display_order').default(0),
+    createdByUserId: uuid('created_by_user_id'),
+  },
+  (table) => [
+    foreignKey({
+      name: 'fk_property_options_properties',
+      columns: [table.propertyId],
+      foreignColumns: [properties.id],
+    }),
+
+    foreignKey({
+      name: 'fk_property_options_users',
+      columns: [table.createdByUserId],
+      foreignColumns: [users.id],
+    }),
+  ]
+);
+
+const links = pgTable('links', {
+  id: uuid()
+    .primaryKey()
+    .default(sql`uuidv7()`),
+  url: varchar({ length: 4096 }).notNull(),
+  title: text(),
+  createdAt: timestamp('created_at', {
+    withTimezone: true,
+  })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', {
+    withTimezone: true,
+  })
+    .notNull()
+    .defaultNow(),
+});
+
+const projects = pgTable(
+  'projects',
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    name: varchar({ length: 80 }).notNull(),
+    summary: varchar({ length: 255 }),
     description: text(),
-    unitWeightKg: numeric("unit_weight_kg", {
-        precision: 12,
-        scale: 3
-    }),
-    lengthCm: numeric("length_cm", {
-        precision: 10,
-        scale: 2
-    }),
-    widthCm: numeric("width_cm", {
-        precision: 10,
-        scale: 2
-    }),
-    heightCm: numeric("height_cm", {
-        precision: 10,
-        scale: 2
-    }),
-    reorderThreshold: integer("reorder_threshold"),
-    isLotTracked: boolean("is_lot_tracked").notNull().default(false),
-    isPerishable: boolean("is_perishable").notNull().default(false),
-    isActive: boolean("is_active").notNull().default(true),
-    createdAt: timestamp("created_at", {
-        withTimezone: true
-    }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", {
-        withTimezone: true
-    }).notNull().defaultNow()
-}, (table) => [
-    foreignKey({
-        name: "fk_products_client",
-        columns: [table.clientId],
-        foreignColumns: [organizations.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_product_category",
-        columns: [table.categoryId],
-        foreignColumns: [productCategories.id]
-    }).onDelete("set null")
-]);
-
-export const warehouses = pgTable("warehouses", {
-    id: integer().primaryKey().generatedAlwaysAsIdentity(),
-    name: varchar({ length: 255 }).notNull().unique(),
-    address: varchar({ length: 255 }),
-    isActive: boolean("is_active").notNull().default(true),
-    createdAt: timestamp("created_at", {
-        withTimezone: true
-    }).notNull().defaultNow()
-});
-
-export const locations = pgTable("locations", {
-    id: integer().primaryKey().generatedAlwaysAsIdentity(),
-    warehouseId: integer("warehouse_id").notNull(),
-    locationCode: varchar("location_code", { length: 100 }).notNull(),
-    locationType: varchar("location_type", { length: 30 }).notNull(),
-    maxWeightCapacityKg: numeric("max_weight_capacity_kg", {
-        precision: 12,
-        scale: 3
-    }),
-    isActive: boolean("is_active").notNull().default(true)
-}, (table) => [
-    foreignKey({
-        name: "fk_locations_warehouse",
-        columns: [table.warehouseId],
-        foreignColumns: [warehouses.id]
-    }),
-    unique("uq_locations_warehouse_code")
-        .on(table.warehouseId, table.locationCode)
-]);
-
-export const inventoryLots = pgTable("inventory_lots", {
-    id: integer().primaryKey().generatedAlwaysAsIdentity(),
-    productId: uuid("product_id").notNull(),
-    lotNumber: varchar("lot_number", {
-        length: 255
-    }).notNull(),
-    manufactureDate: date("manufacture_date").notNull(),
-    expirationDate: date("expiration_date"),
-    createdAt: timestamp("created_at", {
-        withTimezone: true
-    }).notNull().defaultNow()
-}, (table) => [
-    foreignKey({
-        name: "fk_inventory_lots_product",
-        columns: [table.productId],
-        foreignColumns: [products.id]
-    }).onDelete("restrict"),
-    unique("uq_inventory_lots_product_number")
-        .on(table.productId, table.lotNumber)
-]);
-
-export const stockBalances = pgTable("stock_balances", {
-    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    productId: uuid("product_id").notNull(),
-    locationId: integer("location_id").notNull(),
-    lotId: integer("lot_id"),
-    quantityOnHand: integer("quantity_on_hand").notNull().default(0),
-    quantityReserved: integer("quantity_reserved").notNull().default(0),
-    updatedAt: timestamp("updated_at", {
-        withTimezone: true
-    }).notNull().defaultNow()
-}, (table) => [
-    foreignKey({
-        name: "fk_stock_balances_product",
-        columns: [table.productId],
-        foreignColumns: [products.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_stock_balances_location",
-        columns: [table.locationId],
-        foreignColumns: [locations.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_stock_balances_lot",
-        columns: [table.lotId],
-        foreignColumns: [inventoryLots.id]
-    }).onDelete("restrict"),
-    unique("uq_stock_balances")
-        .on(table.productId, table.locationId, table.lotId)
-]);
-
-export const inventoryTransactions = pgTable("inventory_transactions", {
-    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    transactionType: varchar("transaction_type", {
-        length: 30
-    }).notNull(),
-    referenceType: varchar("reference_type", {
-        length: 50
-    }),
-    referenceId: uuid("reference_id"),
-    performedBy: uuid("performed_by"),
-    createdAt: timestamp("created_at", {
-        withTimezone: true
-    }).notNull().defaultNow()
-}, (table) => [
-    foreignKey({
-        name: "fk_inventory_transactions_user",
-        columns: [table.performedBy],
-        foreignColumns: [users.id]
-    }).onDelete("set null")
-]);
-
-export const inventoryTransactionLines = pgTable("inventory_transaction_lines", {
-    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    transactionId: bigint("transaction_id", { mode: "number" }).notNull(),
-    productId: uuid("product_id").notNull(),
-    lotId: integer("lot_id"),
-    locationId: integer("location_id").notNull(),
-    quantityDelta: integer("quantity_delta").notNull(),
-    createdAt: timestamp("created_at", {
-        withTimezone: true
-    }).notNull().defaultNow()
-}, (table) => [
-    foreignKey({
-        name: "fk_inventory_transaction_lines_transaction",
-        columns: [table.transactionId],
-        foreignColumns: [inventoryTransactions.id]
-    }).onDelete("cascade"),
-    foreignKey({
-        name: "fk_inventory_transaction_lines_product",
-        columns: [table.productId],
-        foreignColumns: [products.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_inventory_transaction_lines_lot",
-        columns: [table.lotId],
-        foreignColumns: [inventoryLots.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_inventory_transaction_lines_location",
-        columns: [table.locationId],
-        foreignColumns: [locations.id]
-    }).onDelete("restrict")
-]);
-
-export const inventoryReservations = pgTable("inventory_reservations", {
-    id: bigint({ mode: "number" })
-        .primaryKey()
-        .generatedAlwaysAsIdentity(),
-    orderItemId: bigint("order_item_id", { mode: "number" })
-        .notNull(),
-    productId: uuid("product_id")
-        .notNull(),
-    lotId: integer("lot_id"),
-    locationId: integer("location_id")
-        .notNull(),
-    quantity: integer()
-        .notNull(),
-    status: varchar({ length: 30 })
-        .notNull()
-        .default("ACTIVE"),
-    createdAt: timestamp("created_at", {
-        withTimezone: true
-    }).notNull().defaultNow(),
-    releasedAt: timestamp("released_at", {
-        withTimezone: true
+    startDate: date('start_date'),
+    targetDate: date('target_date'),
+    leadId: uuid('lead_id'),
+    workspaceId: uuid('workspace_id').notNull(),
+    createdBy: uuid('created_by').notNull(),
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
     })
-}, (table) => [
-    foreignKey({
-        name: "fk_reservat[118;1:3uions_order_item",
-        columns: [table.orderItemId],
-        foreignColumns: [orderLineItems.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_reservations_product",
-        columns: [table.productId],
-        foreignColumns: [products.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_reservations_lot",
-        columns: [table.lotId],
-        foreignColumns: [inventoryLots.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_reservations_location",
-        columns: [table.locationId],
-        foreignColumns: [locations.id]
-    }).onDelete("restrict")
-]);
-
-export const purchaseOrders = pgTable("purchase_orders", {
-    id: uuid()
-        .primaryKey()
-        .default(sql`uuidv7()`),
-    clientId: uuid("client_id")
-        .notNull(),
-    vendorId: uuid("vendor_id")
-        .notNull(),
-    status: varchar({ length: 30 })
-        .notNull()
-        .default("DRAFT"),
-    expectedDeliveryDate: date("expected_delivery_date"),
-    createdBy: uuid("created_by"),
-    createdAt: timestamp("created_at", {
-        withTimezone: true
-    }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", {
-        withTimezone: true
-    }).notNull().defaultNow()
-}, (table) => [
-    foreignKey({
-        name: "fk_purchase_orders_client",
-        columns: [table.clientId],
-        foreignColumns: [organizations.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_purchase_orders_vendor",
-        columns: [table.vendorId],
-        foreignColumns: [organizations.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_purchase_orders_created_by",
-        columns: [table.createdBy],
-        foreignColumns: [users.id]
-    }).onDelete("set null")
-]);
-
-export const poLineItems = pgTable("po_line_items", {
-    id: bigint({ mode: "number" })
-        .primaryKey()
-        .generatedAlwaysAsIdentity(),
-    poId: uuid("po_id")
-        .notNull(),
-    productId: uuid("product_id")
-        .notNull(),
-    quantityExpected: integer("quantity_expected")
-        .notNull(),
-    unitCost: numeric("unit_cost", {
-        precision: 12,
-        scale: 2
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', {
+      withTimezone: true,
     })
-}, (table) => [
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
     foreignKey({
-        name: "fk_po_line_items_po",
-        columns: [table.poId],
-        foreignColumns: [purchaseOrders.id]
-    }).onDelete("cascade"),
-    foreignKey({
-        name: "fk_po_line_items_product",
-        columns: [table.productId],
-        foreignColumns: [products.id]
-    }).onDelete("restrict")
-]);
-
-export const receipts = pgTable("receipts", {
-    id: uuid()
-        .primaryKey()
-        .default(sql`uuidv7()`),
-    poId: uuid("po_id")
-        .notNull(),
-    status: varchar({ length: 30 })
-        .notNull()
-        .default("OPEN"),
-    receivedBy: uuid("received_by"),
-    receivedAt: timestamp("received_at", {
-        withTimezone: true
+      name: 'fk_projects_users_lead_id',
+      columns: [table.leadId],
+      foreignColumns: [users.id],
     }),
-    createdAt: timestamp("created_at", {
-        withTimezone: true
-    }).notNull().defaultNow()
-}, (table) => [
-    foreignKey({
-        name: "fk_receipts_po",
-        columns: [table.poId],
-        foreignColumns: [purchaseOrders.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_receipts_user",
-        columns: [table.receivedBy],
-        foreignColumns: [users.id]
-    }).onDelete("set null")
-]);
 
-export const receiptItems = pgTable("receipt_items", {
-    id: bigint({ mode: "number" })
-        .primaryKey()
-        .generatedAlwaysAsIdentity(),
-    receiptId: uuid("receipt_id")
-        .notNull(),
-    poItemId: bigint("po_item_id", { mode: "number" })
-        .notNull(),
-    productId: uuid("product_id")
-        .notNull(),
-    lotId: integer("lot_id"),
-    locationId: integer("location_id")
-        .notNull(),
-    quantityReceived: integer("quantity_received")
-        .notNull()
-}, (table) => [
     foreignKey({
-        name: "fk_receipt_items_receipt",
-        columns: [table.receiptId],
-        foreignColumns: [receipts.id]
-    }).onDelete("cascade"),
-    foreignKey({
-        name: "fk_receipt_items_po_item",
-        columns: [table.poItemId],
-        foreignColumns: [poLineItems.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_receipt_items_product",
-        columns: [table.productId],
-        foreignColumns: [products.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_receipt_items_lot",
-        columns: [table.lotId],
-        foreignColumns: [inventoryLots.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_receipt_items_location",
-        columns: [table.locationId],
-        foreignColumns: [locations.id]
-    }).onDelete("restrict")
-]);
-
-export const salesOrders = pgTable("sales_orders", {
-    id: uuid()
-        .primaryKey()
-        .default(sql`uuidv7()`),
-    clientId: uuid("client_id")
-        .notNull(),
-    orderType: varchar("order_type", {
-        length: 30
-    }).notNull().default("STANDARD"),
-    status: varchar({ length: 30 })
-        .notNull()
-        .default("DRAFT"),
-    shippingAddress: varchar("shipping_address", {
-        length: 500
+      name: 'fk_projects_users_created_by',
+      columns: [table.createdBy],
+      foreignColumns: [users.id],
     }),
-    createdBy: uuid("created_by"),
-    orderDate: timestamp("order_date", {
-        withTimezone: true
-    }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", {
-        withTimezone: true
-    }).notNull().defaultNow()
-}, (table) => [
-    foreignKey({
-        name: "fk_sales_orders_client",
-        columns: [table.clientId],
-        foreignColumns: [organizations.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_sales_orders_created_by",
-        columns: [table.createdBy],
-        foreignColumns: [users.id]
-    }).onDelete("set null")
-]);
 
-export const orderLineItems = pgTable("order_line_items", {
-    id: bigint({ mode: "number" })
-        .primaryKey()
-        .generatedAlwaysAsIdentity(),
-    orderId: uuid("order_id")
-        .notNull(),
-    productId: uuid("product_id")
-        .notNull(),
-    quantityOrdered: integer("quantity_ordered")
-        .notNull(),
-    unitPrice: numeric("unit_price", {
-        precision: 12,
-        scale: 2
-    }).notNull()
-}, (table) => [
     foreignKey({
-        name: "fk_order_line_items_order",
-        columns: [table.orderId],
-        foreignColumns: [salesOrders.id]
-    }).onDelete("cascade"),
-    foreignKey({
-        name: "fk_order_line_items_product",
-        columns: [table.productId],
-        foreignColumns: [products.id]
-    }).onDelete("restrict")
-]);
-
-export const pickTasks = pgTable("pick_tasks", {
-    id: bigint({ mode: "number" })
-        .primaryKey()
-        .generatedAlwaysAsIdentity(),
-    orderItemId: bigint("order_item_id", { mode: "number" })
-        .notNull(),
-    productId: uuid("product_id")
-        .notNull(),
-    lotId: integer("lot_id"),
-    locationId: integer("location_id")
-        .notNull(),
-    quantityToPick: integer("quantity_to_pick")
-        .notNull(),
-    quantityPicked: integer("quantity_picked")
-        .notNull()
-        .default(0),
-    status: varchar({ length: 30 })
-        .notNull()
-        .default("PENDING"),
-    assignedTo: uuid("assigned_to"),
-    createdAt: timestamp("created_at", {
-        withTimezone: true
-    }).notNull().defaultNow(),
-    startedAt: timestamp("started_at", {
-        withTimezone: true
+      name: 'fk_projects_workspaces',
+      columns: [table.workspaceId],
+      foreignColumns: [workspaces.id],
     }),
-    completedAt: timestamp("completed_at", {
-        withTimezone: true
+  ]
+);
+
+const projectLinks = pgTable(
+  'project_links',
+  {
+    projectId: uuid('project_id').notNull(),
+    linkId: uuid('link_id').notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.projectId, table.linkId],
+    }),
+
+    foreignKey({
+      name: 'fk_project_links_projects',
+      columns: [table.projectId],
+      foreignColumns: [projects.id],
+    }),
+
+    foreignKey({
+      name: 'fk_project_links_links',
+      columns: [table.linkId],
+      foreignColumns: [links.id],
+    }),
+  ]
+);
+
+const projectMembers = pgTable(
+  'project_members',
+  {
+    projectId: uuid('project_id').notNull(),
+    memberId: uuid('member_id').notNull(),
+    joinedAt: timestamp('joined_at', {
+      withTimezone: true,
     })
-}, (table) => [
-    foreignKey({
-        name: "fk_pick_tasks_order_item",
-        columns: [table.orderItemId],
-        foreignColumns: [orderLineItems.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_pick_tasks_product",
-        columns: [table.productId],
-        foreignColumns: [products.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_pick_tasks_lot",
-        columns: [table.lotId],
-        foreignColumns: [inventoryLots.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_pick_tasks_location",
-        columns: [table.locationId],
-        foreignColumns: [locations.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_pick_tasks_user",
-        columns: [table.assignedTo],
-        foreignColumns: [users.id]
-    }).onDelete("set null")
-]);
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.projectId, table.memberId],
+    }),
 
-export const shipments = pgTable("shipments", {
+    foreignKey({
+      name: 'fk_project_members_projects',
+      columns: [table.projectId],
+      foreignColumns: [projects.id],
+    }),
+
+    foreignKey({
+      name: 'fk_project_members_users',
+      columns: [table.memberId],
+      foreignColumns: [users.id],
+    }),
+  ]
+);
+
+const projectDependencies = pgTable(
+  'project_dependencies',
+  {
+    projectId: uuid('project_id').notNull(),
+    dependencyId: uuid('dependency_id').notNull(),
+    dependencyType: varchar('dependency_type', {
+      length: 30,
+    }).notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.projectId, table.dependencyId],
+    }),
+
+    foreignKey({
+      name: 'fk_project_dependencies_projects_project_id',
+      columns: [table.projectId],
+      foreignColumns: [projects.id],
+    }),
+
+    foreignKey({
+      name: 'fk_project_dependencies_projects_dependency_id',
+      columns: [table.dependencyId],
+      foreignColumns: [projects.id],
+    }),
+  ]
+);
+
+const projectLabels = pgTable(
+  'project_labels',
+  {
+    projectId: uuid('project_id').notNull(),
+    labelId: uuid('label_id').notNull(),
+    addedAt: timestamp('added_at', {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.projectId, table.labelId],
+    }),
+
+    foreignKey({
+      name: 'fk_project_labels_projects',
+      columns: [table.projectId],
+      foreignColumns: [projects.id],
+    }),
+
+    foreignKey({
+      name: 'fk_project_labels_labels',
+      columns: [table.labelId],
+      foreignColumns: [labels.id],
+    }),
+  ]
+);
+
+const projectProperties = pgTable(
+  'project_properties',
+  {
+    projectId: uuid('project_id').notNull(),
+    propertyId: uuid('property_id').notNull(),
+    addedAt: timestamp('added_at', {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.projectId, table.propertyId],
+    }),
+
+    foreignKey({
+      name: 'fk_project_properties_projects',
+      columns: [table.projectId],
+      foreignColumns: [projects.id],
+    }),
+
+    foreignKey({
+      name: 'fk_project_properties_properties',
+      columns: [table.propertyId],
+      foreignColumns: [properties.id],
+    }),
+  ]
+);
+
+const documents = pgTable(
+  'documents',
+  {
     id: uuid()
-        .primaryKey()
-        .default(sql`uuidv7()`),
-    orderId: uuid("order_id")
-        .notNull(),
-    carrierName: varchar("carrier_name", {
-        length: 255
-    }),
-    trackingNumber: varchar("tracking_number", {
-        length: 255
-    }),
-    shippingCost: numeric("shipping_cost", {
-        precision: 12,
-        scale: 2
-    }),
-    status: varchar({ length: 30 })
-        .notNull()
-        .default("PENDING"),
-    shippedAt: timestamp("shipped_at", {
-        withTimezone: true
-    }),
-    createdAt: timestamp("created_at", {
-        withTimezone: true
-    }).notNull().defaultNow()
-}, (table) => [
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    projectId: uuid('project_id').notNull(),
+    title: varchar({ length: 512 }),
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+    content: jsonb()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+  },
+  (table) => [
     foreignKey({
-        name: "fk_shipments_order",
-        columns: [table.orderId],
-        foreignColumns: [salesOrders.id]
-    }).onDelete("restrict")
-]);
+      name: 'fk_documents_projects',
+      columns: [table.projectId],
+      foreignColumns: [projects.id],
+    }),
+  ]
+);
 
-export const shipmentItems = pgTable("shipment_items", {
-    id: bigint({ mode: "number" })
-        .primaryKey()
-        .generatedAlwaysAsIdentity(),
-    shipmentId: uuid("shipment_id")
-        .notNull(),
-    orderItemId: bigint("order_item_id", { mode: "number" })
-        .notNull(),
-    productId: uuid("product_id")
-        .notNull(),
-    lotId: integer("lot_id"),
-    quantity: integer()
-        .notNull()
-}, (table) => [
+const tasks = pgTable(
+  'tasks',
+  {
+    id: uuid()
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    name: varchar({ length: 80 }).notNull(),
+    description: text(),
+    dueDate: date('due_date'),
+    assignee: uuid(),
+    parentTaskId: uuid('parent_task_id'),
+  },
+  (table) => [
     foreignKey({
-        name: "fk_shipment_items_shipment",
-        columns: [table.shipmentId],
-        foreignColumns: [shipments.id]
-    }).onDelete("cascade"),
-    foreignKey({
-        name: "fk_shipment_items_order_item",
-        columns: [table.orderItemId],
-        foreignColumns: [orderLineItems.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_shipment_items_product",
-        columns: [table.productId],
-        foreignColumns: [products.id]
-    }).onDelete("restrict"),
-    foreignKey({
-        name: "fk_shipment_items_lot",
-        columns: [table.lotId],
-        foreignColumns: [inventoryLots.id]
-    }).onDelete("restrict")
-]);
-
-export const auditLogs = pgTable("audit_logs", {
-    id: bigint({ mode: "number" })
-        .primaryKey()
-        .generatedAlwaysAsIdentity(),
-    userId: uuid("user_id"),
-    organizationId: uuid("organization_id"),
-    entityType: varchar("entity_type", {
-        length: 100
-    }).notNull(),
-    entityId: varchar("entity_id", {
-        length: 100
-    }).notNull(),
-    action: varchar({ length: 50 })
-        .notNull(),
-    oldValues: jsonb("old_values"),
-    newValues: jsonb("new_values"),
-    createdAt: timestamp("created_at", {
-        withTimezone: true
-    }).notNull().defaultNow()
-}, (table) => [
-    foreignKey({
-        name: "fk_audit_logs_user",
-        columns: [table.userId],
-        foreignColumns: [users.id]
-    }).onDelete("set null"),
-    foreignKey({
-        name: "fk_audit_logs_organization",
-        columns: [table.organizationId],
-        foreignColumns: [organizations.id]
-    }).onDelete("set null")
-]);
-
-export const errorLogs = pgTable("error_logs", {
-    id: bigint({ mode: "number" })
-        .primaryKey()
-        .generatedAlwaysAsIdentity(),
-    userId: uuid("user_id"),
-    errorType: varchar("error_type", {
-        length: 255
+      name: 'fk_tasks_users',
+      columns: [table.assignee],
+      foreignColumns: [users.id],
     }),
-    functionName: varchar("function_name", {
-        length: 255
-    }),
-    message: text(),
-    stackTrace: text("stack_trace"),
-    arguments: jsonb(),
-    metadata: jsonb(),
-    createdAt: timestamp("created_at", {
-        withTimezone: true
-    }).notNull().defaultNow()
-}, (table) => [
+
     foreignKey({
-        name: "fk_error_logs_user",
-        columns: [table.userId],
-        foreignColumns: [users.id]
-    }).onDelete("set null")
-]);
+      name: 'fk_tasks',
+      columns: [table.parentTaskId],
+      foreignColumns: [table.id],
+    }),
+  ]
+);
+
+const taskLinks = pgTable(
+  'task_links',
+  {
+    taskId: uuid('task_id').notNull(),
+    linkId: uuid('link_id').notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.taskId, table.linkId],
+    }),
+
+    foreignKey({
+      name: 'fk_task_links_tasks',
+      columns: [table.taskId],
+      foreignColumns: [tasks.id],
+    }),
+
+    foreignKey({
+      name: 'fk_task_links_links',
+      columns: [table.linkId],
+      foreignColumns: [links.id],
+    }),
+  ]
+);
+
+const recurringTasks = pgTable(
+  'recurring_tasks',
+  {
+    taskId: uuid('task_id').primaryKey(),
+    firstDue: date('first_due').notNull(),
+    interval: integer().notNull(),
+    intervalType: varchar('interval_type', { length: 30 }).notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: 'fk_recurring_tasks_tasks',
+      columns: [table.taskId],
+      foreignColumns: [tasks.id],
+    }),
+  ]
+);
+
+const projectTasks = pgTable(
+  'project_tasks',
+  {
+    projectId: uuid('project_id').notNull(),
+    taskId: uuid('task_id').notNull(),
+    addedAt: timestamp('added_at', {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.projectId, table.taskId],
+    }),
+
+    foreignKey({
+      name: 'fk_project_tasks_projects',
+      columns: [table.projectId],
+      foreignColumns: [projects.id],
+    }),
+
+    foreignKey({
+      name: 'fk_project_tasks_tasks',
+      columns: [table.taskId],
+      foreignColumns: [tasks.id],
+    }),
+  ]
+);
+
+const taskProperties = pgTable(
+  'task_properties',
+  {
+    taskId: uuid('task_id').notNull(),
+    propertyId: uuid('property_id').notNull(),
+    addedAt: timestamp('added_at', {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.taskId, table.propertyId],
+    }),
+
+    foreignKey({
+      name: 'fk_task_properties_tasks',
+      columns: [table.taskId],
+      foreignColumns: [tasks.id],
+    }),
+
+    foreignKey({
+      name: 'fk_task_properties_properties',
+      columns: [table.propertyId],
+      foreignColumns: [properties.id],
+    }),
+  ]
+);
+
+const taskLabels = pgTable(
+  'task_labels',
+  {
+    taskId: uuid('task_id').notNull(),
+    labelId: uuid('label_id').notNull(),
+    addedAt: timestamp('added_at', {
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.taskId, table.labelId],
+    }),
+
+    foreignKey({
+      name: 'fk_task_labels_tasks',
+      columns: [table.taskId],
+      foreignColumns: [tasks.id],
+    }),
+
+    foreignKey({
+      name: 'fk_task_labels_labels',
+      columns: [table.labelId],
+      foreignColumns: [labels.id],
+    }),
+  ]
+);
+
+export {
+  users,
+  workspaces,
+  workspaceUsers,
+  labels,
+  properties,
+  propertyOptions,
+  links,
+  projects,
+  projectLinks,
+  projectMembers,
+  projectDependencies,
+  projectLabels,
+  projectProperties,
+  documents,
+  tasks,
+  taskLinks,
+  recurringTasks,
+  projectTasks,
+  taskProperties,
+  taskLabels,
+};
